@@ -1,12 +1,24 @@
+# Python
 __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Generated analysis outputs (root only)
 out.json
 slice.json
 qdg.dot
 qdg.png
 qdg_backward.png
 qdg_forward.png
+
+# Ignore PNGs by default
 *.png
+
+# --- Documentation images (EXCEPTION) ---
+!images/
+!images/*.png
+
+# macOS
 .DS_Store
+
