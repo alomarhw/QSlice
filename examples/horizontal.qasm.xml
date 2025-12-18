@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<unit xmlns="http://www.srcML.org/srcML/src" revision="1.0.0" url="QASM/">
+
+<unit revision="1.0.0" language="QASM" filename="horizontal.qasm">
+<include pos="2">include <literal pos="2" type="string">"stdgates.inc"</literal>;</include>
+
+
+<gate pos="5">gate <name pos="5">repeated_x</name> <parameter_list pos="5" type="quantum"><parameter pos="5"><name pos="5">a</name></parameter></parameter_list> <block pos="5">{<block_content pos="5">
+    <expr_stmt pos="6"><expr pos="6"><call pos="6"><name pos="6">x</name> <argument_list pos="6" type="quantum"><argument pos="6"><expr pos="6"><name pos="6">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="7"><expr pos="7"><call pos="7"><name pos="7">x</name> <argument_list pos="7" type="quantum"><argument pos="7"><expr pos="7"><name pos="7">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="8"><expr pos="8"><call pos="8"><name pos="8">x</name> <argument_list pos="8" type="quantum"><argument pos="8"><expr pos="8"><name pos="8">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="9"><expr pos="9"><call pos="9"><name pos="9">x</name> <argument_list pos="9" type="quantum"><argument pos="9"><expr pos="9"><name pos="9">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="10"><expr pos="10"><call pos="10"><name pos="10">x</name> <argument_list pos="10" type="quantum"><argument pos="10"><expr pos="10"><name pos="10">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="11"><expr pos="11"><call pos="11"><name pos="11">x</name> <argument_list pos="11" type="quantum"><argument pos="11"><expr pos="11"><name pos="11">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="12"><expr pos="12"><call pos="12"><name pos="12">x</name> <argument_list pos="12" type="quantum"><argument pos="12"><expr pos="12"><name pos="12">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+</block_content>}</block></gate>
+
+<decl_stmt pos="15"><decl pos="15"><type pos="15"><name pos="15">qubit</name></type> <name pos="15">q</name></decl>;</decl_stmt>
+<expr_stmt pos="16"><expr pos="16"><call pos="16"><name pos="16">repeated_x</name> <argument_list pos="16" type="quantum"><argument pos="16"><expr pos="16"><name pos="16">q</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+
+</unit>
+
+</unit>

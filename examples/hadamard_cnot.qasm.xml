@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<unit xmlns="http://www.srcML.org/srcML/src" revision="1.0.0" url="QASM/">
+
+<unit revision="1.0.0" language="QASM" filename="hadamard_cnot.qasm">
+<include pos="2">include <literal type="string" pos="2">"stdgates.inc"</literal>;</include>
+
+
+<gate pos="5">gate <name pos="5">hadamard_cnot</name> <parameter_list pos="5" type="quantum"><parameter pos="5"><name pos="5">a</name></parameter>, <parameter pos="5"><name pos="5">b</name></parameter></parameter_list> <block pos="5">{<block_content pos="5">
+    <expr_stmt pos="6"><expr pos="6"><call pos="6"><name pos="6">h</name> <argument_list pos="6" type="quantum"><argument pos="6"><expr pos="6"><name pos="6">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="7"><expr pos="7"><call pos="7"><name pos="7">h</name> <argument_list pos="7" type="quantum"><argument pos="7"><expr pos="7"><name pos="7">b</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="8"><expr pos="8"><call pos="8"><name pos="8">cx</name> <argument_list pos="8" type="quantum"><argument pos="8"><expr pos="8"><name pos="8">a</name></expr></argument>, <argument><expr><name>b</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="9"><expr pos="9"><call pos="9"><name pos="9">h</name> <argument_list pos="9" type="quantum"><argument pos="9"><expr pos="9"><name pos="9">a</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+    <expr_stmt pos="10"><expr pos="10"><call pos="10"><name pos="10">h</name> <argument_list pos="10" type="quantum"><argument pos="10"><expr pos="10"><name pos="10">b</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+</block_content>}</block></gate>
+
+<decl_stmt pos="13"><decl pos="13"><type pos="13"><name pos="13"><name pos="13">qubit</name><index pos="13">[<expr><literal pos="13" type="number">5</literal></expr>]</index></name></type> <name pos="13">p</name></decl>;</decl_stmt>
+
+<expr_stmt pos="15"><expr pos="15"><call pos="15"><name pos="15">hadamard_cnot</name> <argument_list pos="15" type="quantum"><argument pos="15"><expr pos="15"><name pos="15"><name pos="15">p</name><index pos="15">[<expr pos="15"><literal pos="15" type="number">0</literal></expr>]</index></name></expr></argument>, <argument pos="15"><expr pos="15"><name pos="15"><name pos="15">p</name><index pos="15">[<expr pos="15"><literal pos="15" type="number">1</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+
+<expr_stmt pos="17"><expr pos="17"><call pos="17"><name pos="17">hadamard_cnot</name> <argument_list pos="17" type="quantum"><argument pos="17"><expr pos="17"><name pos="17"><name pos="17">p</name><index pos="17">[<expr pos="17"><literal pos="17" type="number">3</literal></expr>]</index></name></expr></argument>, <argument pos="17"><expr pos="17"><name pos="17"><name pos="17">p</name><index pos="17">[<expr pos="17"><literal pos="17" type="number">4</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt></unit>
+
+</unit>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<unit xmlns="http://www.srcML.org/srcML/src" revision="1.0.0" url="QASM/">
+
+<unit revision="1.0.0" language="QASM" filename="encapsulation.qasm">
+<include pos="2">include <literal pos="2" type="string">"stdgates.inc"</literal>;</include>
+
+
+<decl_stmt pos="5"><decl pos="5"><type pos="5"><name pos="5"><name pos="5">qubit</name><index pos="5">[<expr pos="5"><literal pos="5" type="number">2</literal></expr>]</index></name></type> <name pos="5">a</name></decl>;</decl_stmt>
+<decl_stmt pos="6"><decl pos="6"><type pos="6"><name pos="6"><name pos="6">qubit</name><index pos="6">[<expr pos="6"><literal pos="6" type="number">2</literal></expr>]</index></name></type> <name pos="6">b</name></decl>;</decl_stmt>
+
+<expr_stmt pos="8"><expr pos="8"><call pos="8"><name pos="8">x</name> <argument_list pos="8" type="quantum"><argument pos="8"><expr pos="8"><name pos="8"><name pos="8">a</name><index pos="8">[<expr pos="8"><literal pos="8" type="number">0</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+<expr_stmt pos="9"><expr pos="9"><call pos="9"><name pos="9">x</name> <argument_list pos="9" type="quantum"><argument pos="9"><expr pos="9"><name pos="9"><name pos="9">b</name><index pos="9">[<expr pos="9"><literal pos="9" type="number">0</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+<expr_stmt pos="10"><expr pos="10"><call pos="10"><name pos="10">y</name> <argument_list pos="10" type="quantum"><argument pos="10"><expr pos="10"><name pos="10"><name pos="10">b</name><index pos="10">[<expr pos="10"><literal pos="10" type="number">0</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+
+
+<expr_stmt pos="13"><expr pos="13"><call pos="13"><name pos="13">x</name> <argument_list pos="13" type="quantum"><argument pos="13"><expr pos="13"><name pos="13"><name pos="13">b</name><index>[<expr pos="13"><literal pos="13" type="number">1</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+<expr_stmt pos="14"><expr pos="14"><call pos="14"><name pos="14">x</name> <argument_list pos="14" type="quantum"><argument pos="14"><expr pos="14"><name pos="14"><name pos="14">a</name><index pos="14">[<expr pos="14"><literal pos="14" type="number">0</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+<expr_stmt pos="15"><expr pos="15"><call pos="15"><name pos="15">y</name> <argument_list pos="15" type="quantum"><argument pos="15"><expr pos="15"><name pos="15"><name pos="15">a</name><index pos="15">[<expr pos="15"><literal pos="15" type="number">0</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+
+
+<expr_stmt pos="18"><expr pos="18"><call pos="18"><name pos="18">x</name> <argument_list pos="18" type="quantum"><argument pos="18"><expr pos="18"><name pos="18"><name pos="18">a</name><index pos="18">[<expr pos="18"><literal pos="18" type="number">0</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+<expr_stmt pos="19"><expr pos="19"><call pos="19"><name pos="19">x</name> <argument_list pos="19" type="quantum"><argument pos="19"><expr pos="19"><name pos="19"><name pos="19">a</name><index pos="19">[<expr pos="19"><literal pos="19" type="number">1</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+<expr_stmt pos="20"><expr pos="20"><call pos="20"><name pos="20">y</name> <argument_list pos="20" type="quantum"><argument pos="20"><expr pos="20"><name pos="20"><name pos="20">a</name><index pos="20">[<expr pos="20"><literal pos="20" type="number">1</literal></expr>]</index></name></expr></argument></argument_list></call></expr>;</expr_stmt>
+
+</unit>
+
+</unit>

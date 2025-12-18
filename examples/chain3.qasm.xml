@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<unit xmlns="http://www.srcML.org/srcML/src" revision="1.0.0" url="QASM/">
+
+<unit revision="1.0.0" language="QASM" filename="chain3.qasm">
+<include pos="1">include <literal type="string" pos="1">"stdgates.inc"</literal>;</include>
+
+<decl_stmt pos="3"><decl pos="3"><type pos="3"><name pos="3">qubit</name></type> <name pos="3">q1</name></decl>;</decl_stmt>
+<decl_stmt pos="4"><decl pos="4"><type pos="4"><name pos="4">qubit</name></type> <name pos="4">q2</name></decl>;</decl_stmt>
+<decl_stmt pos="5"><decl pos="5"><type pos="5"><name pos="5">qubit</name></type> <name pos="5">q3</name></decl>;</decl_stmt>
+
+<expr_stmt pos="7"><expr pos="7"><call pos="7"><name pos="7">h</name> <argument_list type="quantum" pos="7"><argument pos="7"><expr pos="7"><name pos="7">q1</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+<expr_stmt pos="8"><expr pos="8"><call pos="8"><name pos="8">h</name> <argument_list type="quantum" pos="8"><argument pos="8"><expr pos="8"><name pos="8">q2</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+
+<expr_stmt pos="10"><expr pos="10"><call pos="10"><name pos="10">cx</name> <argument_list type="quantum" pos="10"><argument pos="10"><expr pos="10"><name pos="10">q1</name></expr></argument>, <argument pos="10"><expr pos="10"><name pos="10">q2</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+<expr_stmt pos="11"><expr pos="11"><call pos="11"><name pos="11">cx</name> <argument_list type="quantum" pos="11"><argument pos="11"><expr pos="11"><name pos="11">q2</name></expr></argument>, <argument pos="11"><expr pos="11"><name pos="11">q3</name></expr></argument></argument_list></call></expr>;</expr_stmt>
+
+<decl_stmt pos="13"><decl pos="13"><type pos="13"><name pos="13">bit</name></type> <name pos="13">bit1</name></decl>;</decl_stmt>
+<decl_stmt pos="14"><decl pos="14"><type pos="14"><name pos="14">bit</name></type> <name pos="14">bit2</name></decl>;</decl_stmt>
+<decl_stmt pos="15"><decl pos="15"><type pos="15"><name pos="15">bit</name></type> <name pos="15">bit3</name></decl>;</decl_stmt>
+
+<expr_stmt pos="17"><expr pos="17"><name pos="17">bit1</name> <operator pos="17">=</operator> <operator pos="17">measure</operator> <name pos="17">q1</name></expr>;</expr_stmt>
+<expr_stmt pos="18"><expr pos="18"><name pos="18">bit2</name> <operator pos="18">=</operator> <operator pos="18">measure</operator> <name pos="18">q2</name></expr>;</expr_stmt>
+<expr_stmt pos="19"><expr pos="19"><name pos="19">bit3</name> <operator pos="19">=</operator> <operator pos="19">measure</operator> <name pos="19">q3</name></expr>;</expr_stmt>
+
+</unit>
+
+</unit>

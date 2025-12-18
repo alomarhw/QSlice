@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+out.json
+slice.json
+qdg.dot
+qdg.png
+qdg_backward.png
+qdg_forward.png
+*.png
+.DS_Store
