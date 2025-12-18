@@ -32,7 +32,11 @@ change impact analysis, and program comprehension.
 > Some XML files are manually annotated with position (`pos`) attributes.
 
 ---
+## Quantum Dependency Graph Example
 
+![Quantum Dependency Graph (QDG) example](images/qdg.png)
+
+---
 ## Requirements
 
 - Python 3.9+
