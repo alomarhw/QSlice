@@ -1,7 +1,7 @@
 # QSlice: Quantum Program Slicing via Quantum Dependency Graphs
 
 QSlice is an **experimental quantum program slicing framework** built on top of
-**QStatic** (https://github.com/QuantumStaticAnalysis/QStatic).
+**QStatic** (https://github.com/srcML/QStatic).
 
 It enables dependency-aware analysis of quantum programs by constructing a
 **Quantum Dependency Graph (QDG)** and extracting **forward and backward slices**
