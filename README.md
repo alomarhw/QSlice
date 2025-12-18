@@ -36,6 +36,16 @@ change impact analysis, and program comprehension.
 
 ![Quantum Dependency Graph (QDG) example](images/qdg.png)
 
+## Slice Examples
+
+Backward slice (criterion: `q3` at line 11):
+
+![Backward slice example](images/qdg_backward.png)
+
+Forward slice (criterion: `q2` at line 10):
+
+![Forward slice example](images/qdg_forward.png)
+
 ---
 ## Requirements
 
