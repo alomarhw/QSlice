@@ -130,13 +130,145 @@ created by the commands below and are not required to be committed.
 - Graphviz, if DOT rendering is desired
 - srcML/QStatic-compatible XML input for `parser.py`
 
-On macOS:
+### Installing Graphviz on macOS
+
+If you are on macOS, do **not** use `apt-get`; that command is for
+Debian/Ubuntu Linux and will fail with `apt-get: command not found`.
+
+Also, `pip install graphviz` is usually **not enough** for rendering QDG images:
+it installs a Python package, but QSlice renders images through the Graphviz
+`dot` executable. You need `dot -V` to work in your terminal.
+
+Recommended macOS route:
 
 ```bash
+# Install Homebrew if `brew` is not available.
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Add Homebrew to PATH if the installer asks you to.
+# Apple Silicon Macs usually use /opt/homebrew:
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Intel Macs may use /usr/local instead:
+# echo 'eval "$(/usr/local/bin/brew shellenv)"' >> ~/.zprofile
+# eval "$(/usr/local/bin/brew shellenv)"
+
+# Install Graphviz and srcML.
 brew install graphviz srcml
+
+# Confirm Graphviz is available.
+dot -V
 ```
 
+If you already use Conda, this is also acceptable:
+
+```bash
+conda install -c conda-forge graphviz
+dot -V
+```
+
+Graphviz is optional for JSON-only testing. You can run the parser, slicer, and
+unit tests without it; you only need Graphviz for converting `qdg.dot` to image
+files such as `qdg.png`.
+
 ---
+
+## Reviewer Setup and Test Workflow
+
+Use this section if you want to download the project, verify it, and generate
+the example slices from a clean checkout.
+
+### 1. Clone the repository
+
+```bash
+git clone <REPO_URL> QSlice
+cd QSlice
+```
+
+If you are reviewing a specific branch or pull request, fetch and check out that
+branch before testing:
+
+```bash
+git fetch origin
+git checkout <BRANCH_NAME>
+```
+
+### 2. Verify Python and run tests
+
+```bash
+python3 --version
+python3 -m unittest discover -s tests -v
+python3 -m py_compile qslice.py parser.py src/qpdg_builder.py src/qpdg_cli.py src/qpdg_viz.py
+```
+
+All tests should pass. If your system uses `python` instead of `python3`, replace
+`python3` with `python` in the commands above.
+
+### 3. Parse the included example
+
+```bash
+python3 parser.py examples/chain3.qasm.xml
+```
+
+This creates `out.json`. The repository includes example XML files, so reviewers
+do not need to regenerate XML with srcML just to test QSlice.
+
+### 4. Generate QDG JSON and slices for each qubit
+
+```bash
+# Target q1
+python3 qslice.py --in out.json --qubit q1 --mode quantum --export-qdg --qdg-out qdg_q1.json --out slice_q1.json
+
+# Target q2
+python3 qslice.py --in out.json --qubit q2 --mode quantum --export-qdg --qdg-out qdg_q2.json --out slice_q2.json
+
+# Target q3
+python3 qslice.py --in out.json --qubit q3 --mode quantum --export-qdg --qdg-out qdg_q3.json --out slice_q3.json
+```
+
+Inspect any slice with:
+
+```bash
+python3 -m json.tool slice_q3.json
+```
+
+### 5. Generate DOT and PNG visualizations
+
+DOT export works without Graphviz:
+
+```bash
+python3 qslice.py --in out.json --qubit q3 --mode quantum --export-dot --dot-out qdg_q3.dot --dot-highlight-slice --out slice_q3.json
+```
+
+PNG rendering requires the `dot` executable from Graphviz:
+
+```bash
+dot -Tpng -Gdpi=300 qdg_q3.dot -o qdg_q3.png
+open qdg_q3.png      # macOS
+# xdg-open qdg_q3.png  # Linux
+```
+
+### 6. Test the `src/` compatibility DOT exporter
+
+```bash
+python3 src/qpdg_cli.py --outjson out.json --dot qdg_src.dot
+```
+
+If Graphviz is installed, render it too:
+
+```bash
+dot -Tpng -Gdpi=300 qdg_src.dot -o qdg_src.png
+open qdg_src.png
+```
+
+```bash
+python3 qslice.py \
+  --in out.json \
+  --qubit q3 \
+  --mode quantum \
+  --out slice.json
+```
 
 ## Quick Start
 
@@ -348,6 +480,8 @@ such as `ued`, `ed`, `md`, and `cd`, and DOT styling consistent with the main
 CLI exporter.
 
 Run a syntax check:
+
+## Development and Tests
 
 ## Development and Tests
 
