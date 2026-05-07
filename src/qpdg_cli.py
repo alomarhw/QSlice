@@ -1,17 +1,16 @@
 from __future__ import annotations
 import argparse
-from pathlib import Path
 
 from qpdg_builder import load_outjson, QPDGBuilder
 from qpdg_viz import write_dot, render_with_graphviz
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description="Export the statement-level semantic QDG as DOT")
     ap.add_argument("--outjson", required=True, help="Path to QStatic out.json")
-    ap.add_argument("--dot", default="qpdg.dot", help="Output DOT file")
+    ap.add_argument("--dot", default="qdg.dot", help="Output DOT file")
     ap.add_argument("--render", action="store_true", help="Render DOT via graphviz 'dot'")
-    ap.add_argument("--png", default="qpdg.png", help="PNG output path (if --render)")
+    ap.add_argument("--png", default="qdg.png", help="PNG output path (if --render)")
     ap.add_argument("--no-edge-labels", action="store_true")
     args = ap.parse_args()
 
@@ -29,4 +28,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
