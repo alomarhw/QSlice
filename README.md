@@ -347,7 +347,7 @@ The emitted graph uses statement ids such as `v0`, `v1`, semantic edge labels
 such as `ued`, `ed`, `md`, and `cd`, and DOT styling consistent with the main
 CLI exporter.
 
----
+Run a syntax check:
 
 ## Development and Tests
 
