@@ -15,13 +15,17 @@ change impact analysis, and program comprehension.
 ## Key Capabilities
 
 - **Quantum Dependency Graph (QDG)**
-  - Nodes represent quantum operations (gate calls, control events, measurements)
-  - Edges capture:
-    - Wire dependencies (sequential operations on the same qubit)
-    - Entanglement dependencies (multi-qubit gates such as `cx`)
+  - Nodes represent program statements reconstructed from QStatic action records
+  - Edges capture the paper's semantic dependency relations:
+    - Unitary evolution dependencies (`ued`)
+    - Entanglement dependencies (`ed`)
+    - Measurement dependencies (`md`)
+    - Classical data/control dependencies (`cd`)
 
-- **Forward and Backward Quantum Slicing**
-  - Slice with respect to a qubit, program point (line number), or operation
+- **Qubit-centric Quantum Slicing**
+  - Slice with respect to a target qubit using the statement criterion Γ(q)
+  - Collect semantic predecessors required to preserve the target qubit behavior
+  - Legacy directed forward/backward traversals remain available for debugging
 
 - **Graph-based Visualization**
   - Full QDG visualization
@@ -95,41 +99,32 @@ Render:
 
 ---
 
-### 3) Compute a Backward Slice
+### 3) Compute a Qubit-centric Quantum Slice
 
-Example: backward slice for qubit `q3` at line 11
+Example: semantic quantum slice for target qubit `q3`
 
     python3 qslice.py \
       --qubit q3 \
-      --line 11 \
-      --direction backward \
+      --mode quantum \
       --export-dot \
       --dot-highlight-slice
 
 Render:
-    dot -Tpng -Gdpi=300 qdg.dot -o qdg_backward.png
-    open qdg_backward.png
+    dot -Tpng -Gdpi=300 qdg.dot -o qdg_quantum.png
+    open qdg_quantum.png
 
-This slice includes all quantum operations that **can influence** the slicing criterion.
+This is the default paper-aligned mode. It starts from Γ(q), the statements that
+directly operate on or measure the target qubit, and computes the fixed point of
+semantic predecessors over `ued`, `ed`, `md`, and `cd` edges.
 
 ---
 
-### 4) Compute a Forward Slice
+### 4) Optional Legacy Directed Traversals
 
-Example: forward slice from qubit `q2` at line 10
+Directed traversals are still available for debugging and comparison:
 
-    python3 qslice.py \
-      --qubit q2 \
-      --line 10 \
-      --direction forward \
-      --export-dot \
-      --dot-highlight-slice
-
-Render:
-    dot -Tpng -Gdpi=300 qdg.dot -o qdg_forward.png
-    open qdg_forward.png
-
-This slice includes all operations that **are influenced by** the slicing criterion.
+    python3 qslice.py --qubit q2 --line 10 --mode backward
+    python3 qslice.py --qubit q2 --line 10 --mode forward
 
 ---
 
@@ -139,36 +134,32 @@ After slicing, `slice.json` contains the extracted slice.
 
     python3 - <<'PY'
     import json
-    from collections import defaultdict
 
     d=json.load(open("slice.json"))
-    by_line=defaultdict(list)
-    for a in d["slice_actions"]:
-        by_line[a["line"]].append(a)
-
-    for line in sorted(by_line):
-        acts=by_line[line]
-        ctrl = next((x for x in acts if x["action"]=="ctrl"), None)
-        targ = next((x for x in acts if x["action"]=="ctrl-gate-call"), None)
-        if ctrl and targ:
-            print(f"line {line}: cx {ctrl['qubit']}, {targ['qubit']};")
+    for stmt in d["slice_statements"]:
+        qubits = ", ".join(stmt["qubits"]) or "classical"
+        if stmt["action"] in {"unitary", "guarded-unitary"}:
+            guard = f" if {'; '.join(stmt['conditions'])}" if stmt["conditions"] else ""
+            print(f"line {stmt['line']}: {stmt['gate']} {qubits};{guard}")
+        elif stmt["action"] == "measure":
+            stores = ", ".join(stmt["stores"]) or "?"
+            print(f"line {stmt['line']}: measure {qubits} -> {stores};")
+        elif stmt["action"] == "reset":
+            print(f"line {stmt['line']}: reset {qubits};")
         else:
-            for a in acts:
-                if a["action"]=="gate-call":
-                    print(f"line {line}: {a['gate']} {a['qubit']};")
-                elif a["action"]=="measure":
-                    print(f"line {line}: measure {a['qubit']} -> {a.get('store','?')};")
+            print(f"line {stmt['line']}: {stmt['action']} {qubits};")
     PY
 
 ---
 
 ## Conceptual Model
 
-- Nodes: quantum operations (gate calls, control events, measurements)
-- Wire edges: sequential dependencies on the same qubit
-- Entanglement edges: multi-qubit gate coupling (e.g., `cx`)
-- Backward slice: operations that can influence a slicing criterion
-- Forward slice: operations that are influenced by a slicing criterion
+- Nodes: source-level program statements reconstructed by grouping per-qubit actions with the same `(time, line)`
+- `ued` edges: uninterrupted unitary evolution on a qubit until measurement or reset
+- `ed` edges: semantic influence from multi-qubit unitary operations to later accesses of the entangled qubits
+- `md` edges: prior quantum evolution that influences a measurement outcome
+- `cd` edges: classical data/control influence, including measurement-driven guarded quantum execution
+- Quantum slice: the qubit-centric semantic predecessor fixed point from Γ(q)
 
 ---
 
