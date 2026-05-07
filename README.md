@@ -1,192 +1,373 @@
-# QSlice: Quantum Program Slicing via Quantum Dependency Graphs
+# QSlice: Semantics-Driven Quantum Program Slicing
 
-QSlice is an **experimental quantum program slicing framework** built on top of
-**QStatic** (https://github.com/srcML/QStatic).
+QSlice is an experimental research prototype for constructing a
+**Quantum Dependency Graph (QDG)** and computing **qubit-centric quantum
+slices** from QStatic parser output.
 
-It enables dependency-aware analysis of quantum programs by constructing a
-**Quantum Dependency Graph (QDG)** and extracting **forward and backward slices**
-with respect to quantum operations.
+The current implementation follows a semantics-driven view of quantum slicing:
+a slice is not just a forward or backward graph traversal over syntactic actions.
+Instead, QSlice reconstructs source-level statements, extracts semantic
+quantum/classical dependencies, and computes the statements required to preserve
+the observable behavior of a target qubit.
 
-QSlice is intended for **research and prototyping** in quantum program analysis,
-change impact analysis, and program comprehension.
+QSlice builds on top of **QStatic** (<https://github.com/srcML/QStatic>) for
+OpenQASM parsing and action extraction.
+
+> **Prototype status**
+>
+> QSlice is intended for research, experimentation, and program-analysis
+> prototyping. It is not a production compiler, verifier, or quantum simulator.
+
+---
+
+## What QSlice Computes
+
+Given a parsed quantum program and a target qubit `q`, QSlice computes:
+
+1. A **statement-level QDG** `QDG(P) = (V, E)`.
+2. The qubit slicing criterion `Γ(q)`: statements that directly operate on or
+   measure `q`.
+3. A quantum slice `S(q)`: statements that are semantic predecessors of `Γ(q)`
+   through dependency edges.
+
+In the default mode, QSlice computes a **qubit-centric decomposition slice**:
+
+```text
+S(q) = fixed point of semantic predecessors starting from Γ(q)
+```
+
+This default is exposed as:
+
+```bash
+python3 qslice.py --qubit q3 --mode quantum
+```
+
+`--mode quantum` is the default. Legacy directed traversals are still available
+as `--mode backward` and `--mode forward` for debugging and comparison.
 
 ---
 
-## Key Capabilities
+## Semantic Model
 
-- **Quantum Dependency Graph (QDG)**
-  - Nodes represent program statements reconstructed from QStatic action records
-  - Edges capture the paper's semantic dependency relations:
-    - Unitary evolution dependencies (`ued`)
-    - Entanglement dependencies (`ed`)
-    - Measurement dependencies (`md`)
-    - Classical data/control dependencies (`cd`)
+### Statement-level QDG nodes
 
-- **Qubit-centric Quantum Slicing**
-  - Slice with respect to a target qubit using the statement criterion Γ(q)
-  - Collect semantic predecessors required to preserve the target qubit behavior
-  - Legacy directed forward/backward traversals remain available for debugging
+QStatic emits per-qubit action records. For example, a controlled operation may
+appear as one `ctrl` action on the control qubit and one `ctrl-gate-call` action
+on the target qubit.
 
-- **Graph-based Visualization**
-  - Full QDG visualization
-  - Slice-aware highlighting using Graphviz
+QSlice groups action records with the same `(time, line)` into one
+source-level statement node. This means a statement such as:
 
-> ⚠️ **Note**  
-> QStatic and srcML support for OpenQASM is still evolving.
-> Some XML files are manually annotated with position (`pos`) attributes.
+```qasm
+cx q1, q2;
+```
+
+is represented as one QDG node touching both `q1` and `q2`, rather than as two
+separate per-qubit nodes.
+
+Each statement node records:
+
+- statement id,
+- source line,
+- parser time,
+- statement action kind,
+- gate name, if available,
+- touched qubits,
+- classical variables defined by measurement/classical statements,
+- classical variables used in guards or expressions,
+- guard conditions, when available.
+
+### Semantic dependency edges
+
+QSlice uses four semantic edge types:
+
+| Edge | Meaning |
+| --- | --- |
+| `ued` | **Unitary Evolution Dependency**: uninterrupted unitary evolution on the same qubit until measurement or reset. |
+| `ed` | **Entanglement Dependency**: influence from a multi-qubit unitary to later statements touching qubits in the active entangled set. |
+| `md` | **Measurement Dependency**: prior quantum evolution that contributes to a measurement outcome. |
+| `cd` | **Classical Dependency**: classical data/control influence, including measurement-driven guarded quantum execution. |
+
+These edges are intended to capture semantic influence relevant to preserving a
+target qubit's observable behavior. Execution-order constraints and physical
+constraints that do not express semantic influence are not modeled as QDG edges.
 
 ---
-## Quantum Dependency Graph Example
 
-![Quantum Dependency Graph (QDG) example](images/qdg.png)
+## Repository Layout
 
-## Slice Examples
+```text
+.
+├── qslice.py                 Statement-level QDG construction and slicing CLI
+├── parser.py                 QStatic-derived OpenQASM XML parser
+├── src/
+│   ├── qpdg_builder.py       Earlier/alternate graph builder prototype
+│   ├── qpdg_cli.py           Prototype CLI
+│   └── qpdg_viz.py           Prototype visualization helpers
+├── tests/
+│   └── test_qslice.py        Unit tests for semantic QDG/slicing behavior
+├── examples/
+│   ├── chain3.qasm
+│   ├── chain3.qasm.xml
+│   ├── encapsulation.qasm
+│   ├── encapsulation.qasm.xml
+│   ├── hadamard_cnot.qasm
+│   ├── hadamard_cnot.qasm.xml
+│   ├── horizontal.qasm
+│   └── horizontal.qasm.xml
+└── images/                   Existing graph example images
+```
 
-Backward slice (criterion: `q3` at line 11):
-
-![Backward slice example](images/qdg_backward.png)
-
-Forward slice (criterion: `q2` at line 10):
-
-![Forward slice example](images/qdg_forward.png)
+Generated files such as `out.json`, `slice.json`, `qdg.json`, and `qdg.dot` are
+created by the commands below and are not required to be committed.
 
 ---
+
 ## Requirements
 
 - Python 3.9+
-- srcML
-- Graphviz (`dot`)
+- Graphviz, if DOT rendering is desired
+- srcML/QStatic-compatible XML input for `parser.py`
 
-### macOS installation
-    brew install srcml graphviz
+On macOS:
 
----
-
-## Repository Structure
-
-    .
-    ├── qslice.py               QDG construction and slicing logic
-    ├── parser.py               QStatic parser (from QStatic)
-    ├── examples/
-    │   ├── hadamard_cnot.qasm
-    │   ├── hadamard_cnot.qasm.xml
-    │   ├── chain3.qasm
-    │   └── chain3.qasm.xml
-    ├── out.json                Generated by parser.py
-    ├── slice.json              Generated slice result
-    └── qdg.dot / qdg.png       QDG visualization
+```bash
+brew install graphviz srcml
+```
 
 ---
 
-## Quick Start (5 Minutes)
+## Quick Start
 
-### 1) Parse OpenQASM and generate intermediate representation
+### 1. Parse an OpenQASM XML file
 
-    python3 parser.py examples/chain3.qasm.xml
+```bash
+python3 parser.py examples/chain3.qasm.xml
+```
 
-This produces:
-    out.json
+This writes `out.json`, the QStatic-style intermediate action representation.
+
+### 2. Build a QDG export
+
+```bash
+python3 qslice.py --in out.json --qubit q3 --export-qdg --qdg-out qdg.json
+```
+
+This writes:
+
+- `qdg.json`: statement-level QDG nodes and semantic edges,
+- `slice.json`: the default quantum slice for `q3`.
+
+### 3. Compute a qubit-centric quantum slice
+
+```bash
+python3 qslice.py \
+  --in out.json \
+  --qubit q3 \
+  --mode quantum \
+  --out slice.json
+```
+
+The output includes:
+
+- `criterion`: the matched criterion statements `Γ(q3)`,
+- `slice_lines`: source lines included in the slice,
+- `slice_statements`: statement-level slice nodes with dependency explanations.
+
+### 4. Export a highlighted DOT graph
+
+```bash
+python3 qslice.py \
+  --in out.json \
+  --qubit q3 \
+  --mode quantum \
+  --export-dot \
+  --dot-out qdg.dot \
+  --dot-highlight-slice
+```
+
+Render the DOT file with Graphviz:
+
+```bash
+dot -Tpng -Gdpi=300 qdg.dot -o qdg.png
+```
 
 ---
 
-### 2) Build the Quantum Dependency Graph (QDG)
+## CLI Reference
 
-    python3 qslice.py --export-dot
+```bash
+python3 qslice.py --help
+```
 
-Render:
-    dot -Tpng -Gdpi=300 qdg.dot -o qdg.png
-    open qdg.png
+Common options:
+
+| Option | Description |
+| --- | --- |
+| `--in out.json` | Input QStatic-style JSON file. |
+| `--out slice.json` | Output slice JSON file. |
+| `--qubit q3` | Target qubit for the slicing criterion. |
+| `--line 11` | Optional line filter for criterion matching. |
+| `--time 3` | Optional parser-time filter for criterion matching. |
+| `--action unitary` | Optional statement action filter. |
+| `--gate cx` | Optional gate filter. |
+| `--mode quantum` | Default paper-aligned qubit-centric slice. |
+| `--mode backward` | Legacy directed predecessor traversal. |
+| `--mode forward` | Legacy directed successor traversal. |
+| `--export-qdg` | Write QDG JSON. |
+| `--export-dot` | Write QDG DOT. |
+| `--dot-highlight-slice` | Highlight slice nodes in DOT output. |
+| `--explain-paths` | Include parent-chain explanation paths in `slice.json`. |
+
+`--direction backward|forward` is retained as a deprecated alias for the legacy
+directed modes.
 
 ---
 
-### 3) Compute a Qubit-centric Quantum Slice
+## Output Formats
 
-Example: semantic quantum slice for target qubit `q3`
+### `qdg.json`
 
-    python3 qslice.py \
-      --qubit q3 \
-      --mode quantum \
-      --export-dot \
-      --dot-highlight-slice
+The QDG export has this shape:
 
-Render:
-    dot -Tpng -Gdpi=300 qdg.dot -o qdg_quantum.png
-    open qdg_quantum.png
+```json
+{
+  "nodes": [
+    {
+      "id": 0,
+      "time": 0,
+      "line": 7,
+      "action": "unitary",
+      "gate": "h",
+      "qubits": ["q1"],
+      "stores": [],
+      "uses": [],
+      "conditions": [],
+      "local_names": ["q1"]
+    }
+  ],
+  "edges": [
+    {
+      "from": 0,
+      "to": 2,
+      "type": "ued",
+      "labels": ["q1"]
+    }
+  ]
+}
+```
 
-This is the default paper-aligned mode. It starts from Γ(q), the statements that
-directly operate on or measure the target qubit, and computes the fixed point of
-semantic predecessors over `ued`, `ed`, `md`, and `cd` edges.
+An edge type can contain multiple semantic labels, such as `ed+md`, when the
+same ordered pair has more than one semantic dependency.
 
----
+### `slice.json`
 
-### 4) Optional Legacy Directed Traversals
+The slice output includes both `slice_actions` and `slice_statements`. They are
+currently the same statement-level list; `slice_actions` is retained for
+backward compatibility with older scripts.
 
-Directed traversals are still available for debugging and comparison:
+Important fields:
 
-    python3 qslice.py --qubit q2 --line 10 --mode backward
-    python3 qslice.py --qubit q2 --line 10 --mode forward
+- `criterion`: CLI filters and matched criterion nodes,
+- `slice_qubits`: qubits touched by the slice,
+- `slice_lines`: source lines included in the slice,
+- `slice_statements`: statement nodes included in the slice,
+- `reason_type`: why a non-criterion statement was included,
+- `reason_next_toward_criterion`: next statement along the dependency chain.
 
 ---
 
 ## Printing a Slice in QASM-like Form
 
-After slicing, `slice.json` contains the extracted slice.
+After generating `slice.json`, you can print a compact statement summary:
 
-    python3 - <<'PY'
-    import json
+```bash
+python3 - <<'PY'
+import json
 
-    d=json.load(open("slice.json"))
-    for stmt in d["slice_statements"]:
-        qubits = ", ".join(stmt["qubits"]) or "classical"
-        if stmt["action"] in {"unitary", "guarded-unitary"}:
-            guard = f" if {'; '.join(stmt['conditions'])}" if stmt["conditions"] else ""
-            print(f"line {stmt['line']}: {stmt['gate']} {qubits};{guard}")
-        elif stmt["action"] == "measure":
-            stores = ", ".join(stmt["stores"]) or "?"
-            print(f"line {stmt['line']}: measure {qubits} -> {stores};")
-        elif stmt["action"] == "reset":
-            print(f"line {stmt['line']}: reset {qubits};")
-        else:
-            print(f"line {stmt['line']}: {stmt['action']} {qubits};")
-    PY
-
----
-
-## Conceptual Model
-
-- Nodes: source-level program statements reconstructed by grouping per-qubit actions with the same `(time, line)`
-- `ued` edges: uninterrupted unitary evolution on a qubit until measurement or reset
-- `ed` edges: semantic influence from multi-qubit unitary operations to later accesses of the entangled qubits
-- `md` edges: prior quantum evolution that influences a measurement outcome
-- `cd` edges: classical data/control influence, including measurement-driven guarded quantum execution
-- Quantum slice: the qubit-centric semantic predecessor fixed point from Γ(q)
+d = json.load(open("slice.json"))
+for stmt in d["slice_statements"]:
+    qubits = ", ".join(stmt["qubits"]) or "classical"
+    if stmt["action"] in {"unitary", "guarded-unitary"}:
+        guard = f" if {'; '.join(stmt['conditions'])}" if stmt["conditions"] else ""
+        print(f"line {stmt['line']}: {stmt['gate']} {qubits};{guard}")
+    elif stmt["action"] == "measure":
+        stores = ", ".join(stmt["stores"]) or "?"
+        print(f"line {stmt['line']}: measure {qubits} -> {stores};")
+    elif stmt["action"] == "reset":
+        print(f"line {stmt['line']}: reset {qubits};")
+    else:
+        print(f"line {stmt['line']}: {stmt['action']} {qubits};")
+PY
+```
 
 ---
 
-## Status and Scope
+## Classical Dependencies
 
-QSlice is a **research prototype** intended for:
+The parser can attach guard conditions to quantum actions using the `if` field.
+QSlice extracts identifiers from these conditions and creates `cd` edges from
+previous statements that define those identifiers, such as measurements that
+store into classical bits.
 
-- exploring quantum slicing semantics
-- studying dependency propagation via entanglement
-- serving as a foundation for quantum change impact analysis (CIA)
+QSlice also supports an optional `_classical` list in hand-authored `out.json`
+files for classical post-processing statements:
 
-It is **not** a production compiler or simulator.
+```json
+{
+  "_classical": [
+    {
+      "action": "classical",
+      "time": 6,
+      "line": 15,
+      "store": "c[2]",
+      "expr": "c[0] ^ c[1]"
+    }
+  ]
+}
+```
+
+This allows tests and experiments to model classical statements that may not yet
+be emitted by the parser.
 
 ---
 
-## Relationship to QStatic
+## Development and Tests
 
-QSlice **builds on top of QStatic**:
-- QStatic provides parsing and low-level action extraction
-- QSlice introduces dependency modeling, slicing, and visualization
+Run the unit tests:
 
-QSlice does **not replace** QStatic — it extends it.
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Run a syntax check:
+
+```bash
+python3 -m py_compile qslice.py parser.py src/qpdg_builder.py src/qpdg_cli.py src/qpdg_viz.py
+```
+
+The tests cover:
+
+- statement-level grouping of controlled operations,
+- extraction of `ued`, `ed`, `md`, and `cd` edges,
+- expected qubit slices for the paper-style running example,
+- termination of unitary evolution at measurement.
 
 ---
+
+## Known Limitations
+
+- QSlice depends on the structure and metadata emitted by `parser.py`.
+- Classical dependencies are limited to classical stores/uses visible in
+  `out.json` metadata, guard conditions, or optional `_classical` records.
+- The slicer constructs semantic dependency graphs; it does not simulate quantum
+  programs or statistically compare measurement distributions.
+- DOT images in `images/` are historical/example artifacts and may not represent
+  every current CLI output mode.
+
+---
+
 ## License
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
-
-See the [LICENSE](LICENSE) file for details.
-
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
+See [`LICENSE`](LICENSE) for details.
