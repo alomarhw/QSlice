@@ -262,7 +262,13 @@ dot -Tpng -Gdpi=300 qdg_src.dot -o qdg_src.png
 open qdg_src.png
 ```
 
----
+```bash
+python3 qslice.py \
+  --in out.json \
+  --qubit q3 \
+  --mode quantum \
+  --out slice.json
+```
 
 ## Quick Start
 
@@ -473,7 +479,9 @@ The emitted graph uses statement ids such as `v0`, `v1`, semantic edge labels
 such as `ued`, `ed`, `md`, and `cd`, and DOT styling consistent with the main
 CLI exporter.
 
----
+Run a syntax check:
+
+## Development and Tests
 
 ## Development and Tests
 
