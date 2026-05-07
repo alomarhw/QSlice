@@ -1,9 +1,27 @@
 from __future__ import annotations
 
+"""Compatibility builder for statement-level semantic QDGs.
+
+Historically, this module built a per-qubit QPDG with temporal and local
+entanglement edges.  The main slicer now defines the paper-aligned model in
+``qslice.py``: statement-level nodes and semantic ``ued``/``ed``/``md``/``cd``
+edges.  To keep ``src/qpdg_cli.py`` and visualization helpers useful without
+maintaining a second, divergent graph algorithm, this module adapts the
+canonical ``qslice.build_qdg`` output into the lightweight ``QPDG`` container
+used by the ``src`` tools.
+"""
+
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 import json
-import itertools
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from qslice import build_qdg, statement_brief
 
 
 # -----------------------------
@@ -12,25 +30,28 @@ import itertools
 
 NodeId = str
 
+
 @dataclass(frozen=True)
 class Node:
     id: NodeId
-    kind: str                   # "QOP" | "MEASURE" | "CDEF" | later: "CPRED", "CSTMT"
-    qubit: Optional[str] = None # for quantum nodes
+    kind: str = "STMT"
+    qubit: Optional[str] = None  # Retained for compatibility with older callers.
     time: Optional[int] = None
     line: Optional[int] = None
     action: Optional[str] = None
     gate: Optional[str] = None
     ctrl: Optional[str] = None
-    store: Optional[str] = None # for measurement and cdef
+    store: Optional[str] = None
     meta: Dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass(frozen=True)
 class Edge:
     src: NodeId
     dst: NodeId
-    kind: str                   # "q_temporal" | "q_entanglement" | "q_measure" | "q2c_measure" | ...
+    kind: str  # "ued" | "ed" | "md" | "cd" or combined labels like "ed+md"
     meta: Dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class QPDG:
@@ -56,166 +77,54 @@ class QPDG:
 # Builder
 # -----------------------------
 
+
 class QPDGBuilder:
+    """Build a statement-level semantic QDG from QStatic ``out.json``.
+
+    The returned graph uses statement ids of the form ``v0``, ``v1``, ... and
+    semantic edge kinds from the paper-aligned model: ``ued``, ``ed``, ``md``,
+    and ``cd``.  Combined dependencies are represented as joined labels such as
+    ``ed+md``.
     """
-    Builds a QPDG from QStatic's out.json structure (qubit -> actions[]).
-    Supports:
-      - per-qubit temporal deps
-      - entanglement deps for multi-qubit ops at same (time,line)
-      - measurement deps: last quantum op -> measure -> classical def (store)
-    """
-
-    def __init__(self) -> None:
-        self.g = QPDG()
-        # Track last node per qubit to create temporal edges
-        self._last_on_wire: Dict[str, NodeId] = {}
-        # Group quantum event node-ids by (time, line) to infer entanglement deps
-        self._by_time_line: Dict[Tuple[int, int], List[NodeId]] = {}
-        # Map (qubit, time, line) -> node id (useful for debugging)
-        self._q_event_index: Dict[Tuple[str, int, int], NodeId] = {}
-        # Map classical store name -> last defining node id
-        self._c_last_def: Dict[str, NodeId] = {}
 
     @staticmethod
-    def _is_qubit_entry(key: str, value: Any) -> bool:
-        return isinstance(value, dict) and "actions" in value and key != "_filename"
-
-    @staticmethod
-    def _make_qnode_id(qubit: str, time: int, line: int, action: str, gate: str = "") -> NodeId:
-        # Stable identifier
-        return f"Q::{qubit}::t{time}::l{line}::{action}::{gate or '-'}"
-
-    @staticmethod
-    def _make_measure_id(qubit: str, time: int, line: int, store: str) -> NodeId:
-        return f"M::{qubit}::t{time}::l{line}::store::{store}"
-
-    @staticmethod
-    def _make_cdef_id(store: str, time: int, line: int, qubit: str) -> NodeId:
-        return f"CDEF::{store}::t{time}::l{line}::from::{qubit}"
+    def _node_id(statement_id: int) -> NodeId:
+        return f"v{statement_id}"
 
     def build_from_outjson(self, out: Dict[str, Any]) -> QPDG:
-        # 1) Create nodes + temporal edges wire-by-wire
-        for qubit, entry in out.items():
-            if not self._is_qubit_entry(qubit, entry):
-                continue
+        statements, _g_fwd, _g_bwd, edge_type, edge_meta = build_qdg(out)
+        graph = QPDG()
 
-            actions = entry.get("actions", [])
-            # Sort actions by time (and line as tie-breaker)
-            actions = sorted(actions, key=lambda a: (a.get("time", 0), a.get("line", 0)))
-
-            for a in actions:
-                action = a.get("action", "")
-                time = int(a.get("time", 0))
-                line = int(a.get("line", 0))
-
-                if action == "measure":
-                    store = str(a.get("store", ""))
-                    mid = self._make_measure_id(qubit, time, line, store)
-                    mnode = Node(
-                        id=mid, kind="MEASURE", qubit=qubit, time=time, line=line,
-                        action="measure", store=store
-                    )
-                    self.g.add_node(mnode)
-
-                    # Temporal edge on wire
-                    self._add_temporal_edge(qubit, mid)
-
-                    # Measurement dependence: last quantum op on this wire -> measure
-                    # (If temporal edge already encodes that, we still label explicitly for QPDG)
-                    prev = self._prev_on_wire(qubit, mid)
-                    if prev is not None:
-                        self.g.add_edge(prev, mid, "q_measure")
-
-                    # Measurement -> classical def
-                    if store:
-                        cid = self._make_cdef_id(store, time, line, qubit)
-                        cnode = Node(
-                            id=cid, kind="CDEF", time=time, line=line,
-                            action="def", store=store,
-                            meta={"source": "measure", "qubit": qubit}
-                        )
-                        self.g.add_node(cnode)
-                        self.g.add_edge(mid, cid, "q2c_measure")
-
-                        # Track last def of that classical symbol for future c_data edges
-                        self._c_last_def[store] = cid
-
-                    continue  # measurement handled
-
-                # Otherwise: quantum op node (includes ctrl/targ/ctrl-gate-call/gate-call etc.)
-                gate = str(a.get("type", ""))  # QStatic uses "type" for gate name on some actions
-                ctrl = str(a.get("ctrl", "")) if "ctrl" in a else None
-                local_name = str(a.get("local_name", qubit))
-
-                qid = self._make_qnode_id(qubit, time, line, action, gate)
-                qnode = Node(
-                    id=qid, kind="QOP", qubit=qubit, time=time, line=line,
-                    action=action, gate=gate, ctrl=ctrl,
-                    meta={"local_name": local_name}
+        for stmt in statements:
+            brief = statement_brief(stmt)
+            node_id = self._node_id(stmt.id)
+            graph.add_node(
+                Node(
+                    id=node_id,
+                    kind="STMT",
+                    qubit=next(iter(sorted(stmt.qubits)), None),
+                    time=stmt.time,
+                    line=stmt.line,
+                    action=stmt.action,
+                    gate=stmt.gate,
+                    store=next(iter(sorted(stmt.stores)), None),
+                    meta={
+                        **brief,
+                        "statement_id": stmt.id,
+                        "actions": stmt.actions,
+                    },
                 )
-                self.g.add_node(qnode)
+            )
 
-                # Temporal edge on wire
-                self._add_temporal_edge(qubit, qid)
+        for (src, dst), kind in sorted(edge_type.items()):
+            graph.add_edge(
+                self._node_id(src),
+                self._node_id(dst),
+                kind,
+                labels=sorted(edge_meta.get((src, dst), set())),
+            )
 
-                # Track for entanglement grouping
-                self._by_time_line.setdefault((time, line), []).append(qid)
-                self._q_event_index[(qubit, time, line)] = qid
-
-        # 2) Add entanglement edges by (time,line) groups
-        self._add_entanglement_edges(out)
-
-        # (Future) 3) Add classical data/control deps if out.json includes classical actions
-        # self._add_classical_deps_if_present(out)
-
-        return self.g
-
-    def _prev_on_wire(self, qubit: str, current: NodeId) -> Optional[NodeId]:
-        # Find immediate predecessor based on stored last pointer before updating.
-        # We store last pointer during _add_temporal_edge, so to get prev we need a lookup:
-        # We'll approximate by scanning incoming temporal edges.
-        inc = [e for e in self.g.incoming(current) if e.kind == "q_temporal"]
-        if not inc:
-            return None
-        # There should be at most one temporal predecessor.
-        return inc[0].src
-
-    def _add_temporal_edge(self, qubit: str, nid: NodeId) -> None:
-        prev = self._last_on_wire.get(qubit)
-        if prev is not None:
-            self.g.add_edge(prev, nid, "q_temporal")
-        self._last_on_wire[qubit] = nid
-
-    def _add_entanglement_edges(self, out: Dict[str, Any]) -> None:
-        """
-        Your current qslice.py entanglement rule:
-          - group nodes at same (time,line)
-          - connect ctrl <-> (targ or ctrl-gate-call or ctrl-gate-call style)
-        We'll implement a robust version that uses the action labels present in out.json.
-        """
-        for (time, line), node_ids in self._by_time_line.items():
-            if len(node_ids) < 2:
-                continue
-
-            # Partition nodes by action type
-            def node_action(nid: NodeId) -> str:
-                return self.g.nodes[nid].action or ""
-
-            ctrls = [nid for nid in node_ids if node_action(nid) == "ctrl"]
-            # Commonly targets appear as "targ" or "ctrl-gate-call" (as in your out.json)
-            tgts = [nid for nid in node_ids if node_action(nid) in {"targ", "ctrl-gate-call"}]
-
-            # If we can't classify cleanly, fall back to fully connecting within the group
-            if not ctrls or not tgts:
-                for u, v in itertools.combinations(node_ids, 2):
-                    self.g.add_edge(u, v, "q_entanglement")
-                    self.g.add_edge(v, u, "q_entanglement")
-                continue
-
-            for c in ctrls:
-                for t in tgts:
-                    self.g.add_edge(c, t, "q_entanglement")
-                    self.g.add_edge(t, c, "q_entanglement")
+        return graph
 
 
 def load_outjson(path: str) -> Dict[str, Any]:
@@ -230,9 +139,7 @@ if __name__ == "__main__":
 
     print(f"Nodes: {len(g.nodes)}")
     print(f"Edges: {len(g.edges)}")
-    # Quick edge-type counts
     counts: Dict[str, int] = {}
     for e in g.edges:
         counts[e.kind] = counts.get(e.kind, 0) + 1
     print("Edge counts:", counts)
-

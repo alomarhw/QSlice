@@ -101,11 +101,12 @@ constraints that do not express semantic influence are not modeled as QDG edges.
 ├── qslice.py                 Statement-level QDG construction and slicing CLI
 ├── parser.py                 QStatic-derived OpenQASM XML parser
 ├── src/
-│   ├── qpdg_builder.py       Earlier/alternate graph builder prototype
-│   ├── qpdg_cli.py           Prototype CLI
-│   └── qpdg_viz.py           Prototype visualization helpers
+│   ├── qpdg_builder.py       Compatibility wrapper around the semantic QDG builder
+│   ├── qpdg_cli.py           DOT export CLI for the statement-level QDG
+│   └── qpdg_viz.py           DOT visualization helpers for semantic edges
 ├── tests/
-│   └── test_qslice.py        Unit tests for semantic QDG/slicing behavior
+│   ├── test_qslice.py        Unit tests for semantic QDG/slicing behavior
+│   └── test_src_qpdg.py      Compatibility tests for src DOT/export tools
 ├── examples/
 │   ├── chain3.qasm
 │   ├── chain3.qasm.xml
@@ -332,6 +333,22 @@ be emitted by the parser.
 
 ---
 
+## `src/` Compatibility Tools
+
+The `src/` utilities now reuse the canonical statement-level builder from
+`qslice.py` instead of maintaining a separate per-qubit dependency algorithm.
+Use them when you only need a DOT export of the semantic QDG:
+
+```bash
+python3 src/qpdg_cli.py --outjson out.json --dot qdg.dot
+```
+
+The emitted graph uses statement ids such as `v0`, `v1`, semantic edge labels
+such as `ued`, `ed`, `md`, and `cd`, and DOT styling consistent with the main
+CLI exporter.
+
+Run a syntax check:
+
 ## Development and Tests
 
 Run the unit tests:
@@ -351,7 +368,8 @@ The tests cover:
 - statement-level grouping of controlled operations,
 - extraction of `ued`, `ed`, `md`, and `cd` edges,
 - expected qubit slices for the paper-style running example,
-- termination of unitary evolution at measurement.
+- termination of unitary evolution at measurement,
+- compatibility of `src/` DOT/export helpers with the semantic QDG builder.
 
 ---
 
